@@ -238,6 +238,7 @@ jbCatMan.doCategorySearch = function () {
     SetAbView(abURI);
   } else {
     SetAbView(abURI + "?" + "(or" + searchQuery + ")");
+    jbCatMan.data.agaAbURI = abURI + "?" + "(or" + searchQuery + ")";
   }
   if (document.getElementById("CardViewBox") != null && jbCatMan.data.selectedCategory in jbCatMan.data.foundCategories) {
     SelectFirstCard();  
@@ -410,7 +411,43 @@ jbCatMan.scanCategories = function () {
   jbCatMan.dump("Done with scanCategories()",-1);
 }
 
+jbCatMan.filePicker = function(title, mode, type, defaultFileName) {
+  let nsIFilePicker = Components.interfaces.nsIFilePicker;
+  let fp = Components.classes["@mozilla.org/filepicker;1"].createInstance(nsIFilePicker);
+  
+  if (mode === "SAVE") {
+    fp.init(window, title, nsIFilePicker.modeSave);
+  } 
+  else if (mode === "OPEN") {
+    fp.init(window, title, nsIFilePicker.modeOpen);
+  }
+  
+  if (type === "VCARD") {
+    fp.appendFilter("VCF Datei","*.vcf");
+  }
+  else if (type === "IMAGES") {
+    fp.appendFilters(nsIFilePicker.filterImages);
+  }
+        
+  if (defaultFileName != null && defaultFileName !== undefined && defaultFileName != "") {
+    fp.defaultString = defaultFileName;
+  }
+  
+  let ret = fp.show();
+  
+  if (ret == nsIFilePicker.returnOK || ret == nsIFilePicker.returnReplace) {
+    return fp.file;
+  }
+  return "";
+}
 
+jbCatMan.getVcardOutFile = function(title, defaultFileName) {
+  return jbCatMan.filePicker(title, "SAVE", "VCARD", defaultFileName);
+}
+
+jbCatMan.getVcardInFile = function(title, defaultFileName) {
+  return jbCatMan.filePicker(title, "SAVE", "VCARD", defaultFileName);
+}
 
 
 //init data object and check if SOGo-Connector has been installed

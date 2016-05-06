@@ -157,22 +157,22 @@ jbCatMan.updateButtons = function () {
   document.getElementById("CatManContextMenuSend").disabled = (jbCatMan.data.selectedCategory == ""); 
 
   //Import and export for all groupDavs, regardless of category (if no category selected, export entire abook or import without category tagging)
-  //document.getElementById("CatManContextMenuImport").disabled = isRemote;
-  //document.getElementById("CatManContextMenuExport").disabled = isRemote;
+  document.getElementById("CatManContextMenuImport").disabled = isRemote;
+  document.getElementById("CatManContextMenuExport").disabled = isRemote;
 
   document.getElementById("CatManAddContactCategoryButton").disabled = isRemote;
   document.getElementById("CatManContextMenuAdd").disabled = isRemote;
 
   if (jbCatMan.data.selectedCategory == "") {
-    //document.getElementById("CatManContextMenuImport").label = jbCatMan.locale.menuAllImport;
-    //document.getElementById("CatManContextMenuExport").label = jbCatMan.locale.menuAllExport;
+    document.getElementById("CatManContextMenuImport").label = jbCatMan.locale.menuAllImport;
+    document.getElementById("CatManContextMenuExport").label = jbCatMan.locale.menuAllExport;
     document.getElementById("CatManContextMenuRemove").label = jbCatMan.locale.menuRemove.replace("##name##","");
     document.getElementById("CatManContextMenuEdit").label = jbCatMan.locale.menuEdit.replace("##name##","");
     document.getElementById("CatManContextMenuSend").label = jbCatMan.locale.menuSend.replace("##name##","");
     document.getElementById("CatManContextMenuBulk").label = jbCatMan.locale.menuBulk.replace("##name##","");
   } else {
-    //document.getElementById("CatManContextMenuImport").label = jbCatMan.locale.menuImport.replace("##name##","["+jbCatMan.data.selectedCategory+"]");
-    //document.getElementById("CatManContextMenuExport").label = jbCatMan.locale.menuExport.replace("##name##","["+jbCatMan.data.selectedCategory+"]");
+    document.getElementById("CatManContextMenuImport").label = jbCatMan.locale.menuImport.replace("##name##","["+jbCatMan.data.selectedCategory+"]");
+    document.getElementById("CatManContextMenuExport").label = jbCatMan.locale.menuExport.replace("##name##","["+jbCatMan.data.selectedCategory+"]");
     document.getElementById("CatManContextMenuRemove").label = jbCatMan.locale.menuRemove.replace("##name##","["+jbCatMan.data.selectedCategory+"]");
     document.getElementById("CatManContextMenuEdit").label = jbCatMan.locale.menuEdit.replace("##name##","["+jbCatMan.data.selectedCategory+"]");
     document.getElementById("CatManContextMenuSend").label = jbCatMan.locale.menuSend.replace("##name##","["+jbCatMan.data.selectedCategory+"]");
@@ -219,7 +219,8 @@ jbCatMan.writeToCategory = function () {
 
 jbCatMan.onImport = function () {
   jbCatMan.dump("Begin with onImport()",1);
-  jbCatMan.dump("todo");
+  //jbCatMan.dump("todo");
+  alert("This function is currently not implemented.");
   jbCatMan.dump("Done with onImport()",-1);
 }
 
@@ -227,7 +228,53 @@ jbCatMan.onImport = function () {
 
 jbCatMan.onExport = function () {
   jbCatMan.dump("Begin with onExport()",1);
-  jbCatMan.dump("todo");
+  let categoriesList = document.getElementById("CatManCategoriesList");
+  if (categoriesList.selectedIndex != -1) {
+    let abManager = Components.classes["@mozilla.org/abmanager;1"].getService(Components.interfaces.nsIAbManager);
+    let addressBook = abManager.getDirectory(jbCatMan.data.agaAbURI);
+    let cards = addressBook.childCards;
+    
+    if(cards.length < 1)
+      return;
+    
+    let outfile = jbCatMan.getVcardOutFile("Speichern von: " + categoriesList.selectedIndex.id, categoriesList.selectedIndex.id);
+    
+    if(outfile === "")
+      return;
+
+    jbCatMan.dump("File to save cards: " + outfile.path);
+                
+    let cardstr = "";
+
+    jbCatMan.AbListener.remove();
+
+    while (cards.hasMoreElements()) {
+      let card = cards.getNext().QueryInterface(Components.interfaces.nsIAbCard);
+      cardstr += decodeURIComponent(card.translateTo("vcard"));
+    }
+    
+    if(!outfile.exists()) {
+      outfile.create(Components.interfaces.nsIFile.NORMAL_FILE_TYPE, 420);
+    }
+    
+    let localFile = Components.classes["@mozilla.org/file/local;1"].createInstance(Components.interfaces.nsILocalFile);
+    localFile.initWithPath(outfile.path);
+
+    let outStream = Components.classes["@mozilla.org/network/file-output-stream;1"].createInstance(Components.interfaces.nsIFileOutputStream);
+    outStream.init(localFile, 0x02 | 0x08 | 0x20, 0666, 0);
+    
+    //let converter = Components.classes["@mozilla.org/intl/converter-output-stream;1"].createInstance(Components.interfaces.nsIConverterOutputStream);
+    //converter.init(outStream, "UTF-8", 0, 0);
+    //converter.writeString(cardstr);
+    //converter.close();
+    
+    outStream.write(cardstr, cardstr.length);
+    outStream.close();
+    
+    
+    jbCatMan.AbListener.add();
+  }
+
   jbCatMan.dump("Done with onExport()",-1);
 }
 
@@ -288,7 +335,10 @@ jbCatMan.onSelectCategoryList = function () {
   let categoriesList = document.getElementById("CatManCategoriesList");
   if (categoriesList.selectedIndex != -1) {
     jbCatMan.data.selectedCategory = categoriesList.selectedItem.id
-    categoriesList.clearSelection();
+    //AGA:
+    //Comment out because clearSelection() prevents export function to recognize selection....
+    //Why is it here? Do we f*** up things on a different stage?
+    //categoriesList.clearSelection();
     jbCatMan.doCategorySearch();
   }
   jbCatMan.updateButtons();
